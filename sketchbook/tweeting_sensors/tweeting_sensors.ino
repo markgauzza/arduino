@@ -1,5 +1,5 @@
 #define ANALOG_LIGHT_PIN 0
-#define LIGHT_THRESHOLD .01
+#define LIGHT_TOLERANCE .01
 
 double lastLightRead;
 
@@ -20,7 +20,7 @@ void loop()
     return;
   }
   double lightDelta = (sensorReading-lastLightRead) / lastLightRead;
-  if (lightDelta > LIGHT_THRESHOLD || lightDelta <  LIGHT_THRESHOLD*-1)
+  if (lightDelta > LIGHT_TOLERANCE || lightDelta <  LIGHT_TOLERANCE*-1)
   {
     String verb = "increased";
     if (lightDelta < 0)
