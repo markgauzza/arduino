@@ -14,6 +14,7 @@
 #define READ_TYPE_HUMIDITY 2
 
 
+int currentRead = READ_TYPE_LIGHT;
 dht DHT;
 double lastLightRead;
 // Ethernet Shield Settings
@@ -56,6 +57,11 @@ void loop()
     Serial.println("It is now " + getLightLevelDescription(sensorReading) + ".");
     lastLightRead = sensorReading;
   }
+}
+
+double getDelta(double currentReading, double lastReading)
+{
+	return (lastReading-currentReading)/currentReading;
 }
 
 void initDHT()
