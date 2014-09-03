@@ -4,9 +4,10 @@
 #include <Ethernet.h>
 #include <Twitter.h>
 #include <dht.h>
+#include <stdio.h>
 
 
-#define ANALOG_LIGHT_PIN 0
+  #define ANALOG_LIGHT_PIN 0
 #define LIGHT_TOLERANCE .01
 #define DHT22_PIN 6
 #define READ_TYPE_TEMPERATURE 1
@@ -14,9 +15,12 @@
 #define READ_TYPE_HUMIDITY 2
 
 
-int currentRead = READ_TYPE_LIGHT;
+int currentRead;
+int totalRuns;
 dht DHT;
 double lastLightRead;
+double lastTemperatureRead;
+double lastHumidityRead;
 // Ethernet Shield Settings
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
@@ -36,32 +40,174 @@ void setup()
 
 void loop()
 {
-  double sensorReading = (double)analogRead(ANALOG_LIGHT_PIN);
-  if (lastLightRead == 0)
-  {
-    lastLightRead = sensorReading;
-    Serial.println("Just came online, it is currently " + getLightLevelDescription(sensorReading) + " in here.");
-    return;
+  double sensorReading = 0;
+  String message  = "";
+  double delta = 0;
+  String readDesc = "";
+  String unit = "";
+        Serial.println(lastLightRead);
+        Serial.println(currentRead);
+        
+  if (currentRead == READ_TYPE_LIGHT)
+  {  
+    sensorReading = (double)analogRead(ANALOG_LIGHT_PIN);  
+
+    if (totalRuns == 0)
+    {
+      lastTemperatureRead = getTemperatureReading();
+      lastHumidityRead = getHumidityReading();
+      lastLightRead = max(sensorReading, .001);
+      Serial.println(lastLightRead);
+
+  char tempTemperature[10];
+  dtostrf(lastTemperatureRead, 2, 2, tempTemperature);
+      message = "Just came online, it is " + getLightLevelDescription(lastLightRead) ;
+      message = message + " and the temperature is " +  tempTemperature+ ".";
+
+      sendTweet(message);
+      delay(20000);      
+      totalRuns = totalRuns + 1;
+      return;
+      
+    }
+    else
+    {
+    
+      readDesc = "light level";
+      delta = getDelta(lastLightRead, sensorReading);    
+      lastLightRead = sensorReading;
+      currentRead = READ_TYPE_TEMPERATURE;
+    }
   }
-  double lightDelta = (sensorReading-lastLightRead) / lastLightRead;
-  if (lightDelta > LIGHT_TOLERANCE || lightDelta <  LIGHT_TOLERANCE*-1)
+  else if (currentRead == READ_TYPE_TEMPERATURE)
+  {
+    readDesc = "temperature";
+    sensorReading = getTemperatureReading();
+    delta = getDelta(lastTemperatureRead, sensorReading);
+    lastTemperatureRead = sensorReading;
+    currentRead = READ_TYPE_HUMIDITY;
+    unit = "degrees";
+  }
+  else if (currentRead == READ_TYPE_HUMIDITY)
+  {
+    readDesc = "humidity level";
+    sensorReading = getHumidityReading();
+    delta = getDelta(lastHumidityRead, sensorReading);
+    lastHumidityRead = sensorReading;
+    currentRead = READ_TYPE_LIGHT;
+    unit = "%";
+  }
+  
+  char tempDelta[10];
+  dtostrf(abs(delta), 2 , 2, tempDelta);
+ // Serial.println(tempDelta);
+  char tempSensorReading[10];
+  dtostrf(sensorReading, 2, 2, tempSensorReading);
+ // if (delta > LIGHT_TOLERANCE || delta <  LIGHT_TOLERANCE*-1)
   {
     String verb = "increased";
-    if (lightDelta < 0)
+    if (delta < 0)
     {
       verb = "decreased";
     }
-    Serial.print("The light level has "+verb+" by ");
-    Serial.print(lightDelta, 5);
-    Serial.println("%");
-    Serial.println("It is now " + getLightLevelDescription(sensorReading) + ".");
-    lastLightRead = sensorReading;
+    message = "The "+readDesc;
+    if (delta == 0.00)
+    {
+      message += " is about the same.";
+    }
+    else
+    {
+      message +=  " has "+verb+" by ";
+    }
+
+   message = message + tempDelta;
+    message = message + ("%.  ");
+    
+    if (currentRead == READ_TYPE_LIGHT + 1)
+    {      
+      message = message + ("It is currently " + getLightLevelDescription(sensorReading) + ".");
+    }
+    else 
+    {
+      message = message + "It is currently " ;
+      message = message + tempSensorReading;
+      message = message + unit + ".";
+    }
+    
+    sendTweet(message);
+    Serial.println(message);
+
   }
+  totalRuns = totalRuns + 1;
+  
+  delay(240000* 7);
+  //delay(10000);
 }
 
-double getDelta(double currentReading, double lastReading)
+double getDelta(double lastReading, double currentReading)
 {
-	return (lastReading-currentReading)/currentReading;
+  if (lastReading == 0)
+  {
+    return 100;
+  }
+  return ((currentReading - lastReading) / lastReading) * 100;
+}
+
+boolean sendTweet(String message)
+{
+
+  int length = max(message.length(), 140);
+  if (length == 0)
+  {
+    return false;
+  }
+  length = length + 1;
+  char tweet[length];
+  message.toCharArray(tweet, length);
+
+  Serial.println(tweet);
+  Serial.println("connecting ...");
+  if (twitter.post(tweet)) 
+  {
+    // Specify &Serial to output received response to Serial.
+    // If no output is required, you can just omit the argument, e.g.
+    // int status = twitter.wait();
+    int status = twitter.wait(&Serial);
+    if (status == 200) {
+    Serial.println("OK.");
+    return true;
+   } else {
+    Serial.print("failed : code ");
+     Serial.println(status);
+     return false;
+  }
+ } 
+ else 
+ {
+   Serial.println("connection failed.");
+ }
+    
+  return false;
+}
+
+double getLightReading()
+{
+  return (double)analogRead(ANALOG_LIGHT_PIN);
+}
+
+double getTemperatureReading()
+{
+  initDHT();
+  delay(1000);
+  double temperature = (double)DHT.temperature;
+  return (temperature * 1.8) + 32;
+}
+
+double getHumidityReading()
+{
+  initDHT();
+  delay(1000);
+  return (double)DHT.humidity;
 }
 
 void initDHT()
