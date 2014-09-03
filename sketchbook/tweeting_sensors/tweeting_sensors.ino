@@ -47,7 +47,15 @@ void loop()
   String unit = "";
         Serial.println(lastLightRead);
         Serial.println(currentRead);
-        
+  if (totalRuns >= 25 && totalRuns % 25)
+  {
+    String run = "Cycled through ";
+    run = run + String(totalRuns);
+    run = run + " light, humidity and temperature reads.";
+    sendTweet(run);
+    delay(40000);
+  }
+          
   if (currentRead == READ_TYPE_LIGHT)
   {  
     sensorReading = (double)analogRead(ANALOG_LIGHT_PIN);  
@@ -86,7 +94,7 @@ void loop()
     delta = getDelta(lastTemperatureRead, sensorReading);
     lastTemperatureRead = sensorReading;
     currentRead = READ_TYPE_HUMIDITY;
-    unit = "degrees";
+    unit = " degrees";
   }
   else if (currentRead == READ_TYPE_HUMIDITY)
   {
@@ -118,11 +126,11 @@ void loop()
     else
     {
       message +=  " has "+verb+" by ";
+      message = message + tempDelta;
+      message = message + ("%.  ");
+          
     }
 
-   message = message + tempDelta;
-    message = message + ("%.  ");
-    
     if (currentRead == READ_TYPE_LIGHT + 1)
     {      
       message = message + ("It is currently " + getLightLevelDescription(sensorReading) + ".");
