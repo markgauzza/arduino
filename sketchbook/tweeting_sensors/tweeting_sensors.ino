@@ -47,7 +47,7 @@ void loop()
   String unit = "";
         Serial.println(lastLightRead);
         Serial.println(currentRead);
-  if (totalRuns >= 25 && totalRuns % 25)
+  if (totalRuns >= 25 && totalRuns % 25 == 0)
   {
     String run = "Cycled through ";
     run = run + String(totalRuns);
