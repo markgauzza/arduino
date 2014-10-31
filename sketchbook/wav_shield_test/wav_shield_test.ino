@@ -2,28 +2,40 @@
 #include <WaveUtil.h>
 #include <Wire.h>
 #include <Adafruit_NFCShield_I2C.h>
+#include <Adafruit_NeoPixel.h>
 
+const int buttonPin = 6; 
 
+#define LEDPIN     7
 #define IRQ 6 // this trace must be cut and rewired!
 #define RESET 8
 
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, LEDPIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NFCShield_I2C nfc(IRQ, RESET);
 
+
 SdReader card; // This object holds the information for the card
-FatVolume vol; // This holds the information for the partition on the card
+FatVolume vol; // This holds the formatformatinformation for the partition on the card
 FatReader root; // This holds the information for the volumes root directory
 FatReader file; // This object represent the WAV file for a pi digit or period
 WaveHC wave; // This is the only wave (audio) object, since we will only play one at a time
 /*
-* Define macro to put error messages in flash memory
+* Define macro to put error messPages in flash memory
 */
 #define error(msg) error_P(PSTR(msg))
+
+
+
 
 //////////////////////////////////// SETUP
 
 void setup() {
   // set up Serial library at 9600 bps
   Serial.begin(9600);
+  
+      
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
   
   PgmPrintln("Pi speaker");
   
@@ -57,6 +69,11 @@ void setup() {
   
   // configure board to read RFID tags
   nfc.SAMConfig();
+  
+  playcomplete("hello.wav");
+  
+    pinMode(buttonPin, INPUT_PULLUP);
+
 
 }
 
@@ -69,6 +86,7 @@ void loop() {
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
   uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
 
+   //   rainbow(20);
 
   // wait for RFID card to show up!
   Serial.println("Waiting for an ISO14443A Card ...");
@@ -81,7 +99,8 @@ void loop() {
 
   uint32_t cardidentifier = 0;
   
-  if (success) {
+  if (success) 
+  {
     // Found a card!
 
     Serial.print("Card detected #");
@@ -115,6 +134,18 @@ void loop() {
       playcomplete("EMILY2.WAV");
     }
   }
+  
+  if (! digitalRead(buttonPin))
+  {
+    Serial.print("button");
+    playcomplete("AFFIRM~1.WAV");
+    
+
+
+
+  }
+  
+
 }
 
 /////////////////////////////////// HELPERS
@@ -168,3 +199,34 @@ void playfile(char *name) {
   // ok time to play!
   wave.play();
 }
+
+void rainbow(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else if(WheelPos < 170) {
+    WheelPos -= 85;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  }
+}
+
+
+
