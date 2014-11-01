@@ -7,12 +7,17 @@
 #include "Arduino.h"
 #include "LinkedList.h"
 
+
 class Card
 {
 	public :
-		Card(uint32_t  signature);
+		Card(uint32_t  signature, char* prefix) ;
+		
+		char* getIntroFile();
+		char* getInstructionFile();
 	private :
 		uint32_t  _signature;
+		char* _prefix;
 };
 
 
