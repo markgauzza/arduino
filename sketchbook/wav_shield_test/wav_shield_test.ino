@@ -2,7 +2,9 @@
 #include <WaveUtil.h>
 #include <Wire.h>
 #include <Adafruit_NFCShield_I2C.h>
-#include <Adafruit_NeoPixel.h>
+
+
+#include <Kara.h>
 
 const int buttonPin = 6; 
 
@@ -10,7 +12,7 @@ const int buttonPin = 6;
 #define IRQ 6 // this trace must be cut and rewired!
 #define RESET 8
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, LEDPIN, NEO_GRB + NEO_KHZ800);
+
 Adafruit_NFCShield_I2C nfc(IRQ, RESET);
 
 
@@ -33,24 +35,26 @@ void setup() {
   // set up Serial library at 9600 bps
   Serial.begin(9600);
   
-      
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  initSDCard();  
   
-  PgmPrintln("Pi speaker");
+  initNFC();
   
-  if (!card.init()) {
-    error("Card init. failed!");
-  }
-  if (!vol.init(card)) {
-    error("No partition!");
-  }
-  if (!root.openRoot(vol)) {
-    error("Couldn't open dir");
-  }
+  Card grandmom = Card((uint32_t)3973324075, "GM");
+  Serial.println(grandmom.getIntroFile());
+  
+  playcomplete(grandmom.getIntroFile());
+  
+    pinMode(buttonPin, INPUT_PULLUP);
 
-  PgmPrintln("Files found:");
-  root.ls();
+
+}
+
+/////////////////////////////////// LOOP
+
+unsigned digit = 0;
+
+void initNFC()
+{
   
   // find Adafruit RFID/NFC shield
   nfc.begin();
@@ -70,16 +74,26 @@ void setup() {
   // configure board to read RFID tags
   nfc.SAMConfig();
   
-  playcomplete("hello.wav");
-  
-    pinMode(buttonPin, INPUT_PULLUP);
-
-
 }
 
-/////////////////////////////////// LOOP
+void initSDCard()
+{
+    PgmPrintln("Pi speaker");
+  
+  if (!card.init()) {
+    error("Card init. failed!");
+  }
+  if (!vol.init(card)) {
+    error("No partition!");
+  }
+  if (!root.openRoot(vol)) {
+    error("Couldn't open dir");
+  }
 
-unsigned digit = 0;
+  PgmPrintln("Files found:");
+  root.ls();
+
+}
 
 void loop() {
   uint8_t success;
@@ -117,9 +131,6 @@ void loop() {
       delay(1000);
     }
   
-    if (cardidentifier == 3973324075) {
-      playcomplete("AFFIRM~1.WAV");
-    }
     if (cardidentifier == 3973371115)
     {
       playcomplete("2014.WAV");
@@ -174,7 +185,15 @@ void sdErrorCheck(void) {
 * Play a file and wait for it to complete
 */
 void playcomplete(char *name) {
-  playfile(name);
+  int a = 0;
+  char arr[8];
+  while (name[a] != '\0')
+  {
+    arr[a] = name[a];
+    a++;
+  }
+  arr[a] = '\0';
+  playfile(arr);
   while (wave.isplaying);
   
   // see if an error occurred while playing
@@ -198,34 +217,6 @@ void playfile(char *name) {
   }
   // ok time to play!
   wave.play();
-}
-
-void rainbow(uint8_t wait) {
-  uint16_t i, j;
-
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else if(WheelPos < 170) {
-    WheelPos -= 85;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  } else {
-   WheelPos -= 170;
-   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  }
 }
 
 
