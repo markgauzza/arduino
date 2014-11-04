@@ -1,3 +1,7 @@
+#include <LinkedList.h>
+
+
+
 #include <WaveHC.h>
 #include <WaveUtil.h>
 #include <Wire.h>
@@ -27,9 +31,21 @@ WaveHC wave; // This is the only wave (audio) object, since we will only play on
 #define error(msg) error_P(PSTR(msg))
 
 
+LinkedList<Card*> cardList = LinkedList<Card*>();
+
 
 
 //////////////////////////////////// SETUP
+
+class Animal
+{
+  public :
+    char *name;
+    char isMammal;
+};
+
+LinkedList<Animal*> animalList = LinkedList<Animal*>();
+
 
 void setup() {
   // set up Serial library at 9600 bps
@@ -38,13 +54,24 @@ void setup() {
   initSDCard();  
   
   initNFC();
+
+  Animal *cat = new Animal();
+  cat->name = "test";
+  animalList.add(cat);
   
-  Card grandmom = Card((uint32_t)3973324075, "GM");
-  Serial.println(grandmom.getIntroFile());
+  Card *grandmom = new Card();
+  grandmom->signature = (uint32_t)3973324075;
+  grandmom->prefix = "GM";
   
-  playcomplete(grandmom.getIntroFile());
+  cardList.add(grandmom);
   
-    pinMode(buttonPin, INPUT_PULLUP);
+  Card *card;
+  for (int i = 0; i < cardList.size(); i++)
+  {
+    card = cardList.get(i);
+    Serial.println(card->prefix);
+  }
+  
 
 
 }
@@ -92,10 +119,13 @@ void initSDCard()
 
   PgmPrintln("Files found:");
   root.ls();
+    
 
+  
 }
 
-void loop() {
+void loop() 
+{
   uint8_t success;
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
   uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
@@ -184,15 +214,18 @@ void sdErrorCheck(void) {
 /*
 * Play a file and wait for it to complete
 */
-void playcomplete(char *name) {
+void playcomplete(char *name) 
+{
   int a = 0;
-  char arr[8];
+  char arr[80];
   while (name[a] != '\0')
   {
     arr[a] = name[a];
+     
     a++;
   }
   arr[a] = '\0';
+  Serial.println(arr);
   playfile(arr);
   while (wave.isplaying);
   
