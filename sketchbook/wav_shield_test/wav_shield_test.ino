@@ -37,16 +37,6 @@ LinkedList<Card*> cardList = LinkedList<Card*>();
 
 //////////////////////////////////// SETUP
 
-class Animal
-{
-  public :
-    char *name;
-    char isMammal;
-};
-
-LinkedList<Animal*> animalList = LinkedList<Animal*>();
-
-
 void setup() {
   // set up Serial library at 9600 bps
   Serial.begin(9600);
@@ -55,9 +45,6 @@ void setup() {
   
   initNFC();
 
-  Animal *cat = new Animal();
-  cat->name = "test";
-  animalList.add(cat);
   
   Card *grandmom = new Card();
   grandmom->signature = (uint32_t)3973324075;
@@ -70,6 +57,7 @@ void setup() {
   {
     card = cardList.get(i);
     Serial.println(card->prefix);
+    Serial.println(card->getInstructionFile());
   }
   
 
