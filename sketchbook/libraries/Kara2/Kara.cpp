@@ -28,4 +28,12 @@ char* Card :: getInstructionFile()
   return str;
 }
 
+char* Card :: getPromptFile()
+{
+  char str[80];
+  strcpy(str, prefix);
+  strcat(str, "_P.WAV");
+  return str;
+}
+
 

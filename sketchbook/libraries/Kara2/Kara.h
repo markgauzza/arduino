@@ -17,6 +17,7 @@ class Card
 		char *prefix;
 		char* getIntroFile();
 		char* getInstructionFile();
+		char* getPromptFile();
 };
 
 

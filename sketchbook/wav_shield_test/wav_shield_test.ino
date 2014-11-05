@@ -8,7 +8,13 @@
 #include <Adafruit_NFCShield_I2C.h>
 
 
-#include <Kara.h>
+class Card
+{
+  public :
+    char *prefix;
+    uint32_t signature;
+    
+};
 
 const int buttonPin = 6; 
 
@@ -34,6 +40,8 @@ WaveHC wave; // This is the only wave (audio) object, since we will only play on
 LinkedList<Card*> cardList = LinkedList<Card*>();
 
 
+String stringOne;
+
 
 //////////////////////////////////// SETUP
 
@@ -48,21 +56,43 @@ void setup() {
   
   Card *grandmom = new Card();
   grandmom->signature = (uint32_t)3973324075;
-  grandmom->prefix = "GM";
+  char gm[] = "GM";
+  grandmom->prefix = gm;
+
+
   
-  cardList.add(grandmom);
+  Card *auntJen = new Card();
+  auntJen->signature = (uint32_t)3973446155;
+  char aj[] = "AJ";
+  auntJen->prefix = aj;
   
-  Card *card;
-  for (int i = 0; i < cardList.size(); i++)
-  {
-    card = cardList.get(i);
-    Serial.println(card->prefix);
-    Serial.println(card->getInstructionFile());
-  }
+
+  cardList.add(auntJen);
+  cardList.add(grandmom);  
+  
+  Card *prompt;
+
+  prompt = cardList.get(0);
+  char* prefix = prompt->prefix;
+  char* suffix = "_N.WAV";
+  playcomplete(getFile(prefix, suffix));
   
 
 
 }
+
+
+char* getFile(char* prefix, char* suffix)
+{
+    char fileName[10];    
+
+    strcpy(fileName, prefix);
+    strcat(fileName, suffix);
+    Serial.println(fileName);
+    return fileName;
+  
+}
+
 
 /////////////////////////////////// LOOP
 
@@ -114,6 +144,13 @@ void initSDCard()
 
 void loop() 
 {
+  
+  //Card *prompt = findPrompt();
+//  Serial.print("prompt");
+//  Serial.println(prompt -> getPromptFile());
+//  playcomplete(prompt-> getPromptFile());
+
+  
   uint8_t success;
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
   uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
@@ -143,39 +180,27 @@ void loop()
     cardidentifier <<= 8; cardidentifier |= uid[0];
     Serial.println(cardidentifier);
 
-  // repeat this for loop as many times as you have RFID cards
-    if (cardidentifier == 3973483339) { // this is the card's unique identifier
-      playcomplete("ADIOS.WAV"); // these are file names for the sample audio files - change them to your own file names
-      delay(1000);
-    }
-  
-    if (cardidentifier == 3973371115)
-    {
-      playcomplete("2014.WAV");
-    }
-    
-    if (cardidentifier == 3973446155)
-    {
-      playcomplete("EMILY1.WAV");
-    }
-    if (cardidentifier == 3973443899)
-    {
-      playcomplete("EMILY2.WAV");
-    }
   }
   
   if (! digitalRead(buttonPin))
   {
     Serial.print("button");
     playcomplete("AFFIRM~1.WAV");
-    
 
+  }  
+  
+//  Card *promptCard = findPrompt();
 
+  
+  delay(1000);
 
-  }
+ // playcomplete(promptCard->getPromptFile());
+  
   
 
 }
+
+
 
 /////////////////////////////////// HELPERS
 
