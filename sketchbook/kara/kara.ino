@@ -1,8 +1,9 @@
+
     #include <WaveHC.h>
     #include <WaveUtil.h>
     #include <Wire.h>
     #include <Adafruit_NFCShield_I2C.h>     
-     
+         
     #define IRQ 6 // this trace must be cut and rewired!
     #define RESET 8
      
@@ -26,9 +27,10 @@
     };
     
     Card *currentCard;
-    
+    Card *auntJen;
     Card *auntLauren;
 
+    int index = 0;
     
      
     //////////////////////////////////// SETUP
@@ -72,14 +74,20 @@
        Card *grandmom = new Card();
        grandmom->signature = (uint32_t)3973483339;
        grandmom->name="GM_N.WAV";
+
   
   
        auntLauren = new Card();
        auntLauren->signature=(uint32_t)3973443899;
        auntLauren->name="AL_N.WAV";
+      // cardList.add(auntLauren);
        
+       auntJen = new Card();
+       auntJen = new Card();
+       auntJen->signature=(uint32_t)3973351563;
+       auntJen->name="AJ_N.WAV";
        
-       
+      
        currentCard = grandmom;
      
     }
@@ -109,7 +117,7 @@
       if (success) 
       {
         // Found a disk!     
-        Serial.print("disk detected #");
+        Serial.print("card detected # ");
         // turn the four byte UID of a mifare classic into a single variable #
         diskidentifier = uid[3];
         diskidentifier <<= 8; diskidentifier |= uid[2];
@@ -121,7 +129,15 @@
         if (diskidentifier == currentCard->signature) 
         { 
           playcomplete("AJ_A.WAV");
-          currentCard = auntLauren;
+          if (index == 0)
+          {
+            currentCard = auntLauren;
+            index ++;
+          }
+          else
+          {
+            currentCard = auntJen;
+          }
 
         }
         else
