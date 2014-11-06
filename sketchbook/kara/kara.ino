@@ -6,6 +6,13 @@
          
     #define IRQ 6 // this trace must be cut and rewired!
     #define RESET 8
+    #define MODE_COLORS  3
+    #define MODE_NUMBERS  2
+    #define MODE_NAMES  1
+
+    const int buttonPin = 6;
+    
+    int currentMode = MODE_NAMES;
      
     Adafruit_NFCShield_I2C nfc(IRQ, RESET);
      
@@ -23,6 +30,8 @@
     {
       public :
         char *name;
+
+        char *color;
         uint32_t signature;    
     };
     
@@ -74,21 +83,27 @@
        Card *grandmom = new Card();
        grandmom->signature = (uint32_t)3973483339;
        grandmom->name="GM_N.WAV";
+       grandmom->color="GM_C.WAV";
+      //// grandmom-> number = "GM_D.WAV";
 
   
   
        auntLauren = new Card();
        auntLauren->signature=(uint32_t)3973443899;
        auntLauren->name="AL_N.WAV";
-      // cardList.add(auntLauren);
+     //  auntLauren->number = "AL_D.WAV";
+       auntLauren->color = "AL_C.WAV";
+
        
-       auntJen = new Card();
        auntJen = new Card();
        auntJen->signature=(uint32_t)3973351563;
        auntJen->name="AJ_N.WAV";
+      // auntJen->number = "AJ_D.WAV";
+       auntJen->color="AJ_C.WAV";
        
       
        currentCard = grandmom;
+       pinMode(buttonPin, INPUT_PULLUP);
      
     }
      
@@ -112,21 +127,48 @@
       // 'uid' will be populated with the UID, and uidLength will indicate
       // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
       success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+      
+      if (!digitalRead(buttonPin))
+      {
+          Serial.println("button");
+          switch(currentMode)
+          {
+            case MODE_NAMES:
+              playcomplete("NAMES.WAV");
+              break;
+            case MODE_COLORS:
+              playcomplete("COLORS.WAV");
+              break;              
+            case MODE_NUMBERS:
+              playcomplete("NUMBERS.WAV");
+              break;              
+              
+          }
+          currentMode++;
+          if (currentMode > MODE_COLORS)
+          {
+            currentMode = MODE_NAMES;
+          }
+          delay(1000);
+          return;
+      }
      
-      uint32_t diskidentifier = 0;
+      uint32_t cardidentifier = 0;
       if (success) 
       {
         // Found a disk!     
         Serial.print("card detected # ");
         // turn the four byte UID of a mifare classic into a single variable #
-        diskidentifier = uid[3];
-        diskidentifier <<= 8; diskidentifier |= uid[2];
-        diskidentifier <<= 8; diskidentifier |= uid[1];
-        diskidentifier <<= 8; diskidentifier |= uid[0];
-        Serial.println(diskidentifier);
+        cardidentifier = uid[3];
+        cardidentifier <<= 8; cardidentifier |= uid[2];
+        cardidentifier <<= 8; cardidentifier |= uid[1];
+        cardidentifier <<= 8; cardidentifier |= uid[0];
+        Serial.println(cardidentifier);
+       
+
      
-        // repeat this for loop as many times as you have RFID disks
-        if (diskidentifier == currentCard->signature) 
+        // Correct card
+        if (cardidentifier == currentCard->signature) 
         { 
           playcomplete("AJ_A.WAV");
           if (index == 0)
@@ -140,10 +182,24 @@
           }
 
         }
+        // Incorrect card
         else
         {
           playcomplete("AJ_W.WAV");
-          playcomplete(currentCard->name);
+         /* switch(currentMode)
+          {
+            case MODE_NAMES:
+              playcomplete(currentCard->name);
+              break;
+            case MODE_COLORS:
+              playcomplete(currentCard->color);
+              break;              
+            case MODE_NUMBERS:
+              playcomplete(currentCard->number);
+              break;              
+              
+          }*/
+          
         }
       }
     }
