@@ -2,15 +2,32 @@
     #include <WaveHC.h>
     #include <WaveUtil.h>
     #include <Wire.h>
-    #include <Adafruit_NFCShield_I2C.h>     
+    #include <Adafruit_NFCShield_I2C.h>   
+    #include <avr/pgmspace.h>  
          
     #define IRQ 6 // this trace must be cut and rewired!
     #define RESET 8
     #define MODE_COLORS  3
     #define MODE_NUMBERS  2
     #define MODE_NAMES  1
-
-    const int buttonPin = 6;
+    #define BUTTON_PIN 6
+    
+    
+    const char PROGMEM NAMES_FILE[] = "NAMES.WAV";
+    const char PROGMEM NUMBERS_FILE[] = "NUMBERS.WAV";
+    const char PROGMEM COLORS_FILE[] = "COLORS.WAV";
+    const char PROGMEM PROMPT_FILE[] = "AJ_P.WAV";
+    
+    PROGMEM const char *FILE_TABLE[] =
+    {
+      NAMES_FILE,
+      NUMBERS_FILE,
+      COLORS_FILE,
+      PROMPT_FILE
+    };
+    
+    char buffer[10];
+    
     
     int currentMode = MODE_NAMES;
      
@@ -103,7 +120,7 @@
        
       
        currentCard = grandmom;
-       pinMode(buttonPin, INPUT_PULLUP);
+       pinMode(BUTTON_PIN, INPUT_PULLUP);
      
     }
      
@@ -113,8 +130,8 @@
      
     void loop() 
     {
-      
-      playcomplete("AJ_P.WAV");
+      copyStringToBuffer(PROMPT_FILE); 
+      playcomplete(buffer);
       playcomplete(currentCard->name);
       uint8_t success;
       uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
@@ -128,22 +145,22 @@
       // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
       success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
       
-      if (!digitalRead(buttonPin))
+      if (!digitalRead(BUTTON_PIN))
       {
           Serial.println("button");
           switch(currentMode)
           {
             case MODE_NAMES:
-              playcomplete("NAMES.WAV");
+              copyStringToBuffer(NAMES_FILE);
+
               break;
             case MODE_COLORS:
-              playcomplete("COLORS.WAV");
               break;              
             case MODE_NUMBERS:
-              playcomplete("NUMBERS.WAV");
               break;              
               
           }
+          playcomplete(buffer);
           currentMode++;
           if (currentMode > MODE_COLORS)
           {
@@ -202,6 +219,11 @@
           
         }
       }
+    }
+    
+    void copyStringToBuffer(const char *var)
+    {           
+      strcpy_P(buffer, (char*)pgm_read_word(&(FILE_TABLE[0]))); 
     }
      
     /////////////////////////////////// HELPERS
