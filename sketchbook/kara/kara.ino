@@ -3,34 +3,18 @@
     #include <WaveUtil.h>
     #include <Wire.h>
     #include <Adafruit_NFCShield_I2C.h>   
-    #include <avr/pgmspace.h>  
+
          
     #define IRQ 6 // this trace must be cut and rewired!
     #define RESET 8
-    #define MODE_COLORS  3
-    #define MODE_NUMBERS  2
-    #define MODE_NAMES  1
+    #define MODE_COLORS  2
+    #define MODE_NUMBERS  1
+    #define MODE_NAMES  0
     #define BUTTON_PIN 6
     
-    
-    const char PROGMEM NAMES_FILE[] = "NAMES.WAV";
-    const char PROGMEM NUMBERS_FILE[] = "NUMBERS.WAV";
-    const char PROGMEM COLORS_FILE[] = "COLORS.WAV";
-    const char PROGMEM PROMPT_FILE[] = "AJ_P.WAV";
-    
-    PROGMEM const char *FILE_TABLE[] =
-    {
-      NAMES_FILE,
-      NUMBERS_FILE,
-      COLORS_FILE,
-      PROMPT_FILE
-    };
-    
-    char buffer[10];
-    
-    
+
     int currentMode = MODE_NAMES;
-     
+   
     Adafruit_NFCShield_I2C nfc(IRQ, RESET);
      
     SdReader disk; // This object holds the information for the disk
@@ -41,22 +25,43 @@
     /*
     * Define macro to put error messages in flash memory
     */
+    
+
     #define error(msg) error_P(PSTR(msg))
     
-    class Card
-    {
-      public :
-        char *name;
-
-        char *color;
-        uint32_t signature;    
-    };
+    uint32_t cards[] = {3973443899, 3973483339, 3973352907, 3973371115 };
+    uint32_t currentCard;
     
-    Card *currentCard;
-    Card *auntJen;
-    Card *auntLauren;
+    int currentIndex = 0;
 
-    int index = 0;
+    
+    prog_char string_0[] PROGMEM = "NAMES.WAV";   // "String 0" etc are strings to store - change to suit.
+    prog_char string_1[] PROGMEM = "NUMBERS.WAV";
+    prog_char string_2[] PROGMEM = "COLORS.WAV";
+    prog_char string_3[] PROGMEM = "AL_P.WAV";
+    prog_char string_4[] PROGMEM = "AJ_A.WAV";
+    prog_char string_5[] PROGMEM = "AJ_W.WAV";
+    prog_char string_6[] PROGMEM = "_N.WAV";
+    prog_char string_7[] PROGMEM = "_C.WAV";
+    prog_char string_8[] PROGMEM = "_D.WAV";
+
+
+// Then set up a table to refer to your strings.
+
+PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
+{   
+  string_0,
+  string_1,
+  string_2,
+  string_3,
+  string_4,
+  string_5,
+  string_6,
+  string_7,
+  string_8
+};
+
+char buffer[15];    // make sure this is large enough for the largest string it must hold
     
      
     //////////////////////////////////// SETUP
@@ -65,7 +70,9 @@
     {
       // set up Serial library at 9600 bps
       Serial.begin(9600);
-      PgmPrintln("Pi speaker");
+      
+
+//      PgmPrintln("Pi speaker");
       if (!disk.init()) 
       {
         error("disk init. failed!");
@@ -79,11 +86,10 @@
         error("Couldn't open dir");
       }
      
-      PgmPrintln("Files found:");
-      root.ls();
+      PgmPrintln("Files found:");      
       // find Adafruit RFID/NFC shield
       nfc.begin();
-     
+
       uint32_t versiondata = nfc.getFirmwareVersion();
       if (! versiondata) 
       {
@@ -96,33 +102,54 @@
         Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
         // configure board to read RFID tags
         nfc.SAMConfig();
-      
-       Card *grandmom = new Card();
-       grandmom->signature = (uint32_t)3973483339;
-       grandmom->name="GM_N.WAV";
-       grandmom->color="GM_C.WAV";
-      //// grandmom-> number = "GM_D.WAV";
-
-  
-  
-       auntLauren = new Card();
-       auntLauren->signature=(uint32_t)3973443899;
-       auntLauren->name="AL_N.WAV";
-     //  auntLauren->number = "AL_D.WAV";
-       auntLauren->color = "AL_C.WAV";
-
-       
-       auntJen = new Card();
-       auntJen->signature=(uint32_t)3973351563;
-       auntJen->name="AJ_N.WAV";
-      // auntJen->number = "AJ_D.WAV";
-       auntJen->color="AJ_C.WAV";
        
       
-       currentCard = grandmom;
+      
        pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+   
      
     }
+    
+    void copyToBuffer(int index)
+    {
+      strcpy_P(buffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
+    }
+    
+    void playIndex(int index)
+    {
+      copyToBuffer(index);
+      delay(10);
+      playcomplete(buffer);
+      delay(50);
+    }
+    
+    void buildCardFileName(uint32_t cardIdentifier, int index)
+    {
+      char idBuffer[16];
+
+
+      String strCardId = String(cardIdentifier);
+      int length = strCardId.length();
+      
+      strCardId.substring(length - 4).toCharArray(idBuffer, 10);
+      strcpy(buffer, idBuffer);
+
+      char extBuffer[6];
+      
+      strcpy_P(extBuffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
+      strcat(buffer, extBuffer);
+      
+    }
+    
+    void playCardFile(uint32_t cardIdentifier, int index)
+    {
+      buildCardFileName(cardIdentifier, index);
+      delay(10);
+      playcomplete(buffer);
+    }
+    
+    
      
     /////////////////////////////////// LOOP
      
@@ -130,51 +157,67 @@
      
     void loop() 
     {
-      copyStringToBuffer(PROMPT_FILE); 
-      playcomplete(buffer);
-      playcomplete(currentCard->name);
-      uint8_t success;
-      uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
-      uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A disk type)
-     
-      // wait for RFID disk to show up!
-      Serial.println("Waiting for an ISO14443A disk ...");
-     
-      // Wait for an ISO14443A type disks (Mifare, etc.). When one is found
-      // 'uid' will be populated with the UID, and uidLength will indicate
-      // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
-      success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
-      
+       currentCard = (uint32_t)cards[0];
+      Serial.println(currentCard);
+
       if (!digitalRead(BUTTON_PIN))
       {
-          Serial.println("button");
-          switch(currentMode)
-          {
-            case MODE_NAMES:
-              copyStringToBuffer(NAMES_FILE);
-
-              break;
-            case MODE_COLORS:
-              break;              
-            case MODE_NUMBERS:
-              break;              
-              
-          }
-          playcomplete(buffer);
           currentMode++;
+          playIndex(currentMode);
+
           if (currentMode > MODE_COLORS)
           {
             currentMode = MODE_NAMES;
           }
-          delay(1000);
+          delay(500);
           return;
       }
+      
+      
+      // Play prompt
+
+      playIndex(3);
+      
+      
+      
+
+      switch (currentMode)
+      {
+        case MODE_NAMES:
+          playCardFile(currentCard, 6);
+          break;
+        case MODE_COLORS:  
+          playCardFile(currentCard, 7);
+          break;
+        case MODE_NUMBERS:
+          playCardFile(currentCard, 8);
+          break;
+      }
+      
+
+
+
+
+
+     uint8_t success;
+     uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
+     uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A disk type)
+      
+      // wait for RFID disk to show up!
+      //Serial.println("Waiting for an ISO14443A disk ...");
+     
+      // Wait for an ISO14443A type disks (Mifare, etc.). When one is found
+      // 'uid' will be populated with the UID, and uidLength will indicate
+      // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
+      success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);         
+    
+
      
       uint32_t cardidentifier = 0;
       if (success) 
       {
-        // Found a disk!     
-        Serial.print("card detected # ");
+        // Found a card!     
+        PgmPrint("card detected # ");
         // turn the four byte UID of a mifare classic into a single variable #
         cardidentifier = uid[3];
         cardidentifier <<= 8; cardidentifier |= uid[2];
@@ -185,46 +228,37 @@
 
      
         // Correct card
-        if (cardidentifier == currentCard->signature) 
+        if (cardidentifier == currentCard) 
         { 
-          playcomplete("AJ_A.WAV");
-          if (index == 0)
-          {
-            currentCard = auntLauren;
-            index ++;
-          }
-          else
-          {
-            currentCard = auntJen;
-          }
+          PgmPrintln("correct");
+          playIndex(4);
+         
 
         }
         // Incorrect card
         else
         {
-          playcomplete("AJ_W.WAV");
-         /* switch(currentMode)
+          playIndex(5);
+          
+          switch(currentMode)
           {
             case MODE_NAMES:
-              playcomplete(currentCard->name);
+              playCardFile(currentCard, 6);
               break;
             case MODE_COLORS:
-              playcomplete(currentCard->color);
+              playCardFile(currentCard, 7);
               break;              
             case MODE_NUMBERS:
-              playcomplete(currentCard->number);
+              playCardFile(currentCard, 8);
               break;              
-              
-          }*/
+           
+          }   
           
         }
       }
+      
     }
     
-    void copyStringToBuffer(const char *var)
-    {           
-      strcpy_P(buffer, (char*)pgm_read_word(&(FILE_TABLE[0]))); 
-    }
      
     /////////////////////////////////// HELPERS
      
