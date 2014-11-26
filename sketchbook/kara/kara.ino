@@ -157,18 +157,19 @@ char buffer[15];    // make sure this is large enough for the largest string it 
      
     void loop() 
     {
-       currentCard = (uint32_t)cards[0];
+       currentCard = (uint32_t)cards[currentIndex];
       Serial.println(currentCard);
 
       if (!digitalRead(BUTTON_PIN))
       {
           currentMode++;
-          playIndex(currentMode);
-
           if (currentMode > MODE_COLORS)
           {
             currentMode = MODE_NAMES;
-          }
+          }          
+          playIndex(currentMode);
+
+
           delay(500);
           return;
       }
@@ -232,7 +233,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         { 
           PgmPrintln("correct");
           playIndex(4);
-         
+          currentIndex++;
 
         }
         // Incorrect card
