@@ -1,5 +1,4 @@
-
-    #include <WaveHC.h>
+#include <WaveHC.h>
     #include <WaveUtil.h>
     #include <Wire.h>
     #include <Adafruit_NFCShield_I2C.h>   
@@ -29,7 +28,7 @@
 
     #define error(msg) error_P(PSTR(msg))
     
-    uint32_t cards[] = {3973443899, 3973483339, 3973352907, 3973371115 };
+    uint32_t cards[] = {3973351563, 3973371115, 3973446219, 3973369115, 3973446155,3973483131,3973483339, 3973443899,3973352907 };
     uint32_t currentCard;
     
     int currentIndex = 0;
@@ -44,6 +43,7 @@
     prog_char string_6[] PROGMEM = "_N.WAV";
     prog_char string_7[] PROGMEM = "_C.WAV";
     prog_char string_8[] PROGMEM = "_D.WAV";
+    prog_char string_9[] PROGMEM = "_S.WAV";
 
 
 // Then set up a table to refer to your strings.
@@ -58,7 +58,8 @@ PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
   string_5,
   string_6,
   string_7,
-  string_8
+  string_8,
+  string_9
 };
 
 char buffer[15];    // make sure this is large enough for the largest string it must hold
@@ -93,13 +94,13 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       uint32_t versiondata = nfc.getFirmwareVersion();
       if (! versiondata) 
       {
-        Serial.print("Didn't find PN53x board");
+        PgmPrintln("Didn't find PN53x board");
         while (1); // halt
       }
         // Got ok data, print it out!
-        Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-        Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
-        Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+        PgmPrintln("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
+        PgmPrintln("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
+        Serial.println('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
         // configure board to read RFID tags
         nfc.SAMConfig();
        
@@ -158,7 +159,6 @@ char buffer[15];    // make sure this is large enough for the largest string it 
     void loop() 
     {
        currentCard = (uint32_t)cards[currentIndex];
-      Serial.println(currentCard);
 
       if (!digitalRead(BUTTON_PIN))
       {
@@ -223,9 +223,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         cardidentifier = uid[3];
         cardidentifier <<= 8; cardidentifier |= uid[2];
         cardidentifier <<= 8; cardidentifier |= uid[1];
-        cardidentifier <<= 8; cardidentifier |= uid[0];
-        Serial.println(cardidentifier);
-       
+        cardidentifier <<= 8; cardidentifier |= uid[0];      
 
      
         // Correct card
@@ -234,6 +232,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
           PgmPrintln("correct");
           playIndex(4);
           currentIndex++;
+          playCardFile(cardidentifier, 9);
 
         }
         // Incorrect card
