@@ -29,10 +29,11 @@
     #define error(msg) error_P(PSTR(msg))
     
     uint32_t cards[] = {3973351563, 3973371115, 3973446219, 3973369115, 3973446155,3973483131,3973483339, 3973443899,3973352907 };
+   
     uint32_t currentCard;
     
     int currentIndex = 0;
-
+    int totalCards = 0;
     
     prog_char string_0[] PROGMEM = "NAMES.WAV";   // "String 0" etc are strings to store - change to suit.
     prog_char string_1[] PROGMEM = "NUMBERS.WAV";
@@ -72,6 +73,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       // set up Serial library at 9600 bps
       Serial.begin(9600);
       
+      totalCards = sizeof(cards) / (sizeof(cards[0]));
 
 //      PgmPrintln("Pi speaker");
       if (!disk.init()) 
@@ -231,7 +233,20 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         { 
           PgmPrintln("correct");
           playIndex(4);
-          currentIndex++;
+          
+
+          Serial.println(currentIndex <= totalCards - 1);
+          if (currentIndex == (totalCards - 1))
+          {
+            PgmPrintln("Reached end of list");
+            currentIndex = 0;            
+          }
+          else
+          {
+            currentIndex++;
+          }
+                    Serial.println(currentIndex);
+          
           playCardFile(cardidentifier, 9);
 
         }
