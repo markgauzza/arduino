@@ -9,7 +9,8 @@
     #define MODE_COLORS  2
     #define MODE_NUMBERS  1
     #define MODE_NAMES  0
-    #define BUTTON_PIN 6
+    #define BUTTON_PIN 7
+    #define GAME_PIN 6
     
 
     int currentMode = MODE_NAMES;
@@ -28,23 +29,26 @@
 
     #define error(msg) error_P(PSTR(msg))
     
-    uint32_t cards[] = {3973351563, 3973371115, 3973446219, 3973369115, 3973446155,3973483131,3973483339, 3973443899,3973352907 };
+    uint32_t cards[] = {3973351563, 3973371115, 3973446219, 3973324075, 3973369115, 3973446155,3973483131,3973483339, 3973443899,3973352907 };
    
     uint32_t currentCard;
     
     int currentIndex = 0;
     int totalCards = 0;
+    int readAttempts = 0;
+    int buttonPushes = 0;
     
     prog_char string_0[] PROGMEM = "NAMES.WAV";   // "String 0" etc are strings to store - change to suit.
     prog_char string_1[] PROGMEM = "NUMBERS.WAV";
     prog_char string_2[] PROGMEM = "COLORS.WAV";
-    prog_char string_3[] PROGMEM = "AL_P.WAV";
+    prog_char string_3[] PROGMEM = "4075_P.WAV";
     prog_char string_4[] PROGMEM = "AJ_A.WAV";
     prog_char string_5[] PROGMEM = "AJ_W.WAV";
     prog_char string_6[] PROGMEM = "_N.WAV";
     prog_char string_7[] PROGMEM = "_C.WAV";
     prog_char string_8[] PROGMEM = "_D.WAV";
     prog_char string_9[] PROGMEM = "_S.WAV";
+    prog_char string_10[] PROGMEM ="AJ_P.WAV";
 
 
 // Then set up a table to refer to your strings.
@@ -60,7 +64,8 @@ PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
   string_6,
   string_7,
   string_8,
-  string_9
+  string_9,
+  string_10
 };
 
 char buffer[15];    // make sure this is large enough for the largest string it must hold
@@ -103,13 +108,16 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         PgmPrintln("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
         PgmPrintln("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
         Serial.println('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+
+        nfc.setPassiveActivationRetries(0x00l);
         // configure board to read RFID tags
         nfc.SAMConfig();
        
+
       
       
        pinMode(BUTTON_PIN, INPUT_PULLUP);
-
+       pinMode(GAME_PIN, INPUT_PULLUP);
    
      
     }
@@ -150,9 +158,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       buildCardFileName(cardIdentifier, index);
       delay(10);
       playcomplete(buffer);
-    }
-    
-    
+    }        
      
     /////////////////////////////////// LOOP
      
@@ -161,9 +167,12 @@ char buffer[15];    // make sure this is large enough for the largest string it 
     void loop() 
     {
        currentCard = (uint32_t)cards[currentIndex];
-
+       PgmPrint("button pushed ");
+      Serial.println(digitalRead(BUTTON_PIN));
       if (!digitalRead(BUTTON_PIN))
       {
+          readAttempts = 0;
+          buttonPushes ++;
           currentMode++;
           if (currentMode > MODE_COLORS)
           {
@@ -177,29 +186,16 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       }
       
       
-      // Play prompt
-
-      playIndex(3);
-      
-      
-      
-
-      switch (currentMode)
+      if (readAttempts == 0)
       {
-        case MODE_NAMES:
-          playCardFile(currentCard, 6);
-          break;
-        case MODE_COLORS:  
-          playCardFile(currentCard, 7);
-          break;
-        case MODE_NUMBERS:
-          playCardFile(currentCard, 8);
-          break;
+        playPrompt();
+      }
+      else if (buttonPushes > 3)
+      {
+        buttonPushes = 0;
+        playCardFile(cards[3], 9);
       }
       
-
-
-
 
 
      uint8_t success;
@@ -219,6 +215,9 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       uint32_t cardidentifier = 0;
       if (success) 
       {
+        readAttempts = 0;
+        buttonPushes = 0;
+        
         // Found a card!     
         PgmPrint("card detected # ");
         // turn the four byte UID of a mifare classic into a single variable #
@@ -271,8 +270,41 @@ char buffer[15];    // make sure this is large enough for the largest string it 
           
         }
       }
+      else      
+      {
+        readAttempts ++;
+        PgmPrintln("No card");
+      }
       
-    }
+    } // End method loop
+    
+    void playPrompt()
+    {
+      // Play prompt
+      if (currentIndex > 0 && currentIndex % 2 == 0)
+      {
+        playIndex(10);
+      }
+      else
+      {
+        playIndex(3);
+      }      
+ 
+      switch (currentMode)
+      {
+        case MODE_NAMES:
+          playCardFile(currentCard, 6);
+          break;
+        case MODE_COLORS:  
+          playCardFile(currentCard, 7);
+          break;
+        case MODE_NUMBERS:
+          playCardFile(currentCard, 8);
+          break;
+      }
+      delay(100);
+      
+    } // End method playPrompt
     
      
     /////////////////////////////////// HELPERS
