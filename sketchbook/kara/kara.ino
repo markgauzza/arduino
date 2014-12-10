@@ -205,7 +205,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       }
       
       
-      if (readAttempts == 0)
+      if (readAttempts == 0 || readAttempts % 300 == 0)
       {
         playPrompt();
       }
@@ -285,6 +285,8 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         readAttempts ++;
         PgmPrintln("No card");
       }
+      
+      delay(10);
       
     } // End method loop
     
