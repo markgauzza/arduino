@@ -9,11 +9,12 @@
     #define MODE_COLORS  2
     #define MODE_NUMBERS  1
     #define MODE_NAMES  0
-    #define BUTTON_PIN 7
-    #define GAME_PIN 6
+    #define BUTTON_PIN 8
+    #define GAME_PIN 7
     
 
     int currentMode = MODE_NAMES;
+    byte isGameMode = 0;
    
     Adafruit_NFCShield_I2C nfc(IRQ, RESET);
      
@@ -49,6 +50,8 @@
     prog_char string_8[] PROGMEM = "_D.WAV";
     prog_char string_9[] PROGMEM = "_S.WAV";
     prog_char string_10[] PROGMEM ="AJ_P.WAV";
+    prog_char string_11[] PROGMEM ="EM_CI.WAV";
+    prog_char string_12[] PROGMEM = "EM_GI.WAV";
 
 
 // Then set up a table to refer to your strings.
@@ -65,7 +68,9 @@ PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
   string_7,
   string_8,
   string_9,
-  string_10
+  string_10,
+  string_11,
+  string_12
 };
 
 char buffer[15];    // make sure this is large enough for the largest string it must hold
@@ -113,8 +118,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         // configure board to read RFID tags
         nfc.SAMConfig();
        
-
-      
+       delay(500);
       
        pinMode(BUTTON_PIN, INPUT_PULLUP);
        pinMode(GAME_PIN, INPUT_PULLUP);
@@ -168,7 +172,6 @@ char buffer[15];    // make sure this is large enough for the largest string it 
     {
        currentCard = (uint32_t)cards[currentIndex];
        PgmPrint("button pushed ");
-      Serial.println(digitalRead(BUTTON_PIN));
       if (!digitalRead(BUTTON_PIN))
       {
           readAttempts = 0;
@@ -183,6 +186,22 @@ char buffer[15];    // make sure this is large enough for the largest string it 
 
           delay(500);
           return;
+      }
+      
+      if (!digitalRead(GAME_PIN))
+      {
+        if (isGameMode == 1)
+        {
+          playIndex(11);
+          isGameMode = 0;
+        }
+        else
+        {
+          playIndex(12);
+          isGameMode = 1;
+        }
+        readAttempts = 0;
+        
       }
       
       
@@ -228,13 +247,17 @@ char buffer[15];    // make sure this is large enough for the largest string it 
 
      
         // Correct card
-        if (cardidentifier == currentCard) 
+        if (isGameMode == 0)
+        {
+          playCardMode(cardidentifier);
+          playCardFile(cardidentifier, 9);
+        }
+        else if (cardidentifier == currentCard) 
         { 
           PgmPrintln("correct");
-          playIndex(4);
-          
+          playIndex(4);         
 
-          Serial.println(currentIndex <= totalCards - 1);
+         
           if (currentIndex == (totalCards - 1))
           {
             PgmPrintln("Reached end of list");
@@ -244,7 +267,6 @@ char buffer[15];    // make sure this is large enough for the largest string it 
           {
             currentIndex++;
           }
-                    Serial.println(currentIndex);
           
           playCardFile(cardidentifier, 9);
 
@@ -253,20 +275,8 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         else
         {
           playIndex(5);
-          
-          switch(currentMode)
-          {
-            case MODE_NAMES:
-              playCardFile(currentCard, 6);
-              break;
-            case MODE_COLORS:
-              playCardFile(currentCard, 7);
-              break;              
-            case MODE_NUMBERS:
-              playCardFile(currentCard, 8);
-              break;              
-           
-          }   
+          playCardMode(currentCard);
+
           
         }
       }
@@ -278,8 +288,30 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       
     } // End method loop
     
+    void playCardMode(uint32_t cardidentifier)
+    {
+          switch(currentMode)
+          {
+            case MODE_NAMES:
+              playCardFile(cardidentifier, 6);
+              break;
+            case MODE_COLORS:
+              playCardFile(cardidentifier, 7);
+              break;              
+            case MODE_NUMBERS:
+              playCardFile(cardidentifier, 8);
+              break;              
+           
+          }   
+    }
+    
     void playPrompt()
     {
+      if (isGameMode == 0)
+      {
+        playIndex(11);
+        return;
+      }
       // Play prompt
       if (currentIndex > 0 && currentIndex % 2 == 0)
       {
