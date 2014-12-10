@@ -171,7 +171,6 @@ char buffer[15];    // make sure this is large enough for the largest string it 
     void loop() 
     {
        currentCard = (uint32_t)cards[currentIndex];
-       PgmPrint("button pushed ");
       if (!digitalRead(BUTTON_PIN))
       {
           readAttempts = 0;
@@ -191,8 +190,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       if (!digitalRead(GAME_PIN))
       {
         if (isGameMode == 1)
-        {
-          playIndex(11);
+        {         
           isGameMode = 0;
         }
         else
@@ -201,18 +199,21 @@ char buffer[15];    // make sure this is large enough for the largest string it 
           isGameMode = 1;
         }
         readAttempts = 0;
+        buttonPushes++;
         
       }
       
-      
-      if (readAttempts == 0 || readAttempts % 300 == 0)
+      if (readAttempts == 0)
       {
         playPrompt();
-      }
-      else if (buttonPushes > 3)
+      }           
+      else if (readAttempts % 1024 == 0 || buttonPushes > 2)
       {
+        Serial.println(readAttempts);
         buttonPushes = 0;
-        playCardFile(cards[3], 9);
+        playRandomSong();
+        delay(100);
+        playPrompt();
       }
       
 
@@ -283,12 +284,18 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       else      
       {
         readAttempts ++;
-        PgmPrintln("No card");
       }
       
       delay(10);
       
     } // End method loop
+    
+    void playRandomSong()
+    {
+      int randomNumber = random(0, totalCards);
+      playCardFile(cards[randomNumber], 9);
+      
+    } // End method playRandomSong
     
     void playCardMode(uint32_t cardidentifier)
     {
