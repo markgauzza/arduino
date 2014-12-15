@@ -30,7 +30,7 @@
 
     #define error(msg) error_P(PSTR(msg))
     
-    uint32_t cards[] = {3973351563, 3973371115, 3973446219, 3973324075, 3973369115, 3973446155,3973483131,3973483339, 3973443899,3973352907 };
+    uint32_t cards[] = {3496599971, 384132608, 3492105171, 372801280, 17936672, 17931312,383666656,383756576, 384227840,372429680 };
    
     uint32_t currentCard;
     
@@ -114,7 +114,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         PgmPrintln("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
         Serial.println('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
 
-        nfc.setPassiveActivationRetries(0x00l);
+        nfc.setPassiveActivationRetries(0x002);
         // configure board to read RFID tags
         nfc.SAMConfig();
        
@@ -123,6 +123,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
        pinMode(BUTTON_PIN, INPUT_PULLUP);
        pinMode(GAME_PIN, INPUT_PULLUP);
    
+       playPrompt();
      
     }
     
@@ -192,6 +193,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         if (isGameMode == 1)
         {         
           isGameMode = 0;
+          playPrompt();
         }
         else
         {
@@ -205,11 +207,13 @@ char buffer[15];    // make sure this is large enough for the largest string it 
       
       if (readAttempts == 0)
       {
-        playPrompt();
+        if (isGameMode == 1)
+        {
+          playPrompt();
+        }
       }           
       else if (readAttempts % 1024 == 0 || buttonPushes > 2)
       {
-        Serial.println(readAttempts);
         buttonPushes = 0;
         playRandomSong();
         delay(100);
@@ -240,18 +244,22 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         
         // Found a card!     
         PgmPrint("card detected # ");
+
         // turn the four byte UID of a mifare classic into a single variable #
         cardidentifier = uid[3];
         cardidentifier <<= 8; cardidentifier |= uid[2];
         cardidentifier <<= 8; cardidentifier |= uid[1];
         cardidentifier <<= 8; cardidentifier |= uid[0];      
-
+        Serial.println(cardidentifier);
      
         // Correct card
         if (isGameMode == 0)
         {
           playCardMode(cardidentifier);
-          playCardFile(cardidentifier, 9);
+          if (currentMode == MODE_NAMES)
+          {
+            playCardFile(cardidentifier, 9);
+          }
         }
         else if (cardidentifier == currentCard) 
         { 
@@ -269,7 +277,10 @@ char buffer[15];    // make sure this is large enough for the largest string it 
             currentIndex++;
           }
           
-          playCardFile(cardidentifier, 9);
+          if (currentMode == MODE_NAMES)
+          {
+            playCardFile(cardidentifier, 9);
+          }
 
         }
         // Incorrect card
@@ -387,7 +398,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
     wave.stop(); // stop it
     }
     if (!file.open(root, name)) {
-    PgmPrint("Couldn't open file ");
+    PgmPrintln("Couldn't open file ");
     Serial.print(name);
     return;
     }
