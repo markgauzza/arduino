@@ -21,6 +21,7 @@ dht DHT;
 double lastLightRead;
 double lastTemperatureRead;
 double lastHumidityRead;
+boolean debug = false;
 // Ethernet Shield Settings
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
@@ -36,6 +37,7 @@ void setup()
   Serial.begin(9600);
   delay(2500);
   Ethernet.begin(mac, ip);
+  Serial.println("Reset");
 }
 
 void loop()
@@ -106,6 +108,7 @@ void loop()
     unit = "%";
   }
   
+  
   char tempDelta[10];
   dtostrf(abs(delta), 2 , 2, tempDelta);
  // Serial.println(tempDelta);
@@ -148,8 +151,8 @@ void loop()
   }
   totalRuns = totalRuns + 1;
   
-  delay(240000* 7);
-  //delay(10000);
+  delay(1800000);
+  //delay(1000);
 }
 
 double getDelta(double lastReading, double currentReading)
@@ -162,7 +165,7 @@ double getDelta(double lastReading, double currentReading)
 }
 
 boolean sendTweet(String message)
-{
+{ 
 
   int length = max(message.length(), 140);
   if (length == 0)
@@ -171,11 +174,15 @@ boolean sendTweet(String message)
   }
   length = length + 1;
   char tweet[length];
+  Serial.println(message);
+  Serial.print(message.length());
+  Serial.println(" characters");
   message.toCharArray(tweet, length);
+  strcat(tweet, (char*)" #arduino bit.ly/1APgD0F");
 
   Serial.println(tweet);
   Serial.println("connecting ...");
-  if (twitter.post(tweet)) 
+  if (!debug && twitter.post(tweet)) 
   {
     // Specify &Serial to output received response to Serial.
     // If no output is required, you can just omit the argument, e.g.
@@ -190,7 +197,7 @@ boolean sendTweet(String message)
      return false;
   }
  } 
- else 
+ else if (!debug)
  {
    Serial.println("connection failed.");
  }
