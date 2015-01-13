@@ -1,23 +1,47 @@
+#include <LinkedList.h>
+
+
+
 #include <WaveHC.h>
 #include <WaveUtil.h>
 #include <Wire.h>
 #include <Adafruit_NFCShield_I2C.h>
 
 
+class Card
+{
+  public :
+    char *prefix;
+    uint32_t signature;
+    
+};
+
+const int buttonPin = 6; 
+
+#define LEDPIN     7
 #define IRQ 6 // this trace must be cut and rewired!
 #define RESET 8
 
+
 Adafruit_NFCShield_I2C nfc(IRQ, RESET);
 
+
 SdReader card; // This object holds the information for the card
-FatVolume vol; // This holds the information for the partition on the card
+FatVolume vol; // This holds the formatformatinformation for the partition on the card
 FatReader root; // This holds the information for the volumes root directory
 FatReader file; // This object represent the WAV file for a pi digit or period
 WaveHC wave; // This is the only wave (audio) object, since we will only play one at a time
 /*
-* Define macro to put error messages in flash memory
+* Define macro to put error messPages in flash memory
 */
 #define error(msg) error_P(PSTR(msg))
+
+
+LinkedList<Card*> cardList = LinkedList<Card*>();
+
+
+String stringOne;
+
 
 //////////////////////////////////// SETUP
 
@@ -25,20 +49,57 @@ void setup() {
   // set up Serial library at 9600 bps
   Serial.begin(9600);
   
-  PgmPrintln("Pi speaker");
+  initSDCard();  
   
-  if (!card.init()) {
-    error("Card init. failed!");
-  }
-  if (!vol.init(card)) {
-    error("No partition!");
-  }
-  if (!root.openRoot(vol)) {
-    error("Couldn't open dir");
-  }
+  initNFC();
 
-  PgmPrintln("Files found:");
-  root.ls();
+  
+  Card *grandmom = new Card();
+  grandmom->signature = (uint32_t)3973324075;
+  char gm[] = "GM";
+  grandmom->prefix = gm;
+
+
+  
+  Card *auntJen = new Card();
+  auntJen->signature = (uint32_t)3973446155;
+  char aj[] = "AJ";
+  auntJen->prefix = aj;
+  
+
+  cardList.add(auntJen);
+  cardList.add(grandmom);  
+  
+  Card *prompt;
+
+  prompt = cardList.get(0);
+  char* prefix = prompt->prefix;
+  char* suffix = "_N.WAV";
+  playcomplete(getFile(prefix, suffix));
+  
+
+
+}
+
+
+char* getFile(char* prefix, char* suffix)
+{
+    char fileName[10];    
+
+    strcpy(fileName, prefix);
+    strcat(fileName, suffix);
+    Serial.println(fileName);
+    return fileName;
+  
+}
+
+
+/////////////////////////////////// LOOP
+
+unsigned digit = 0;
+
+void initNFC()
+{
   
   // find Adafruit RFID/NFC shield
   nfc.begin();
@@ -57,18 +118,44 @@ void setup() {
   
   // configure board to read RFID tags
   nfc.SAMConfig();
-
+  
 }
 
-/////////////////////////////////// LOOP
+void initSDCard()
+{
+    PgmPrintln("Pi speaker");
+  
+  if (!card.init()) {
+    error("Card init. failed!");
+  }
+  if (!vol.init(card)) {
+    error("No partition!");
+  }
+  if (!root.openRoot(vol)) {
+    error("Couldn't open dir");
+  }
 
-unsigned digit = 0;
+  PgmPrintln("Files found:");
+  root.ls();
+    
 
-void loop() {
+  
+}
+
+void loop() 
+{
+  
+  //Card *prompt = findPrompt();
+//  Serial.print("prompt");
+//  Serial.println(prompt -> getPromptFile());
+//  playcomplete(prompt-> getPromptFile());
+
+  
   uint8_t success;
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // Buffer to store the returned UID
   uint8_t uidLength; // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
 
+   //   rainbow(20);
 
   // wait for RFID card to show up!
   Serial.println("Waiting for an ISO14443A Card ...");
@@ -81,7 +168,8 @@ void loop() {
 
   uint32_t cardidentifier = 0;
   
-  if (success) {
+  if (success) 
+  {
     // Found a card!
 
     Serial.print("Card detected #");
@@ -92,30 +180,27 @@ void loop() {
     cardidentifier <<= 8; cardidentifier |= uid[0];
     Serial.println(cardidentifier);
 
-  // repeat this for loop as many times as you have RFID cards
-    if (cardidentifier == 3973483339) { // this is the card's unique identifier
-      playcomplete("ADIOS.WAV"); // these are file names for the sample audio files - change them to your own file names
-      delay(1000);
-    }
-  
-    if (cardidentifier == 3973324075) {
-      playcomplete("AFFIRM~1.WAV");
-    }
-    if (cardidentifier == 3973371115)
-    {
-      playcomplete("2014.WAV");
-    }
-    
-    if (cardidentifier == 3973446155)
-    {
-      playcomplete("EMILY1.WAV");
-    }
-    if (cardidentifier == 3973443899)
-    {
-      playcomplete("EMILY2.WAV");
-    }
   }
+  
+  if (! digitalRead(buttonPin))
+  {
+    Serial.print("button");
+    playcomplete("AFFIRM~1.WAV");
+
+  }  
+  
+//  Card *promptCard = findPrompt();
+
+  
+  delay(1000);
+
+ // playcomplete(promptCard->getPromptFile());
+  
+  
+
 }
+
+
 
 /////////////////////////////////// HELPERS
 
@@ -142,8 +227,19 @@ void sdErrorCheck(void) {
 /*
 * Play a file and wait for it to complete
 */
-void playcomplete(char *name) {
-  playfile(name);
+void playcomplete(char *name) 
+{
+  int a = 0;
+  char arr[80];
+  while (name[a] != '\0')
+  {
+    arr[a] = name[a];
+     
+    a++;
+  }
+  arr[a] = '\0';
+  Serial.println(arr);
+  playfile(arr);
   while (wave.isplaying);
   
   // see if an error occurred while playing
@@ -168,3 +264,6 @@ void playfile(char *name) {
   // ok time to play!
   wave.play();
 }
+
+
+
