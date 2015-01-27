@@ -13,6 +13,7 @@
 #define READ_TYPE_TEMPERATURE 1
 #define READ_TYPE_LIGHT 0
 #define READ_TYPE_HUMIDITY 2
+#define INTERVAL 5
 
 
 int currentRead;
@@ -22,6 +23,9 @@ double lastLightRead;
 double lastTemperatureRead;
 double lastHumidityRead;
 boolean debug = false;
+char buffer [40];
+char tweetBuffer[120];
+
 // Ethernet Shield Settings
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
@@ -31,31 +35,58 @@ byte ip[] = { 192, 168, 1, 177 };
 // Your Token to Tweet (get it from http://arduino-tweet.appspot.com/)
 Twitter twitter("2355186536-xXWPEzUPbXpNQQd9SgxosgK7SDpsQeE4zSlWc4h");
 
+prog_char string_0[] PROGMEM = " #arduino bit.ly/1APgD0F";  
+prog_char string_1[] PROGMEM = "Cycled through ";  
+prog_char string_2[] PROGMEM = " light, temperature and humidity reads.";  
+
+PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
+{   
+  string_0,
+  string_1,
+  string_2
+};
+
 
 void setup()
 {
   Serial.begin(9600);
   delay(2500);
   Ethernet.begin(mac, ip);
-  Serial.println("Reset");
+  Serial.println("startup");
 }
 
 void loop()
 {
+  Serial.print("RAM: ");
+  Serial.println(freeRam());
   double sensorReading = 0;
   String message  = "";
   double delta = 0;
   String readDesc = "";
   String unit = "";
-        Serial.println(lastLightRead);
-        Serial.println(currentRead);
-  if (totalRuns >= 25 && totalRuns % 25 == 0)
+  char msgBuffer [100];
+  
+  if (totalRuns >= INTERVAL && totalRuns % INTERVAL == 0)
   {
-    String run = "Cycled through ";
-    run = run + String(totalRuns);
-    run = run + " light, humidity and temperature reads.";
-    sendTweet(run);
-    delay(40000);
+    Serial.println("Reached interval");
+    
+    strcpy_P(msgBuffer, (char*)pgm_read_word(&(string_table[1]))); 
+
+
+    char runBuf[4];
+    dtostrf(totalRuns, 0, 0, runBuf);
+
+    strcat(msgBuffer, runBuf);
+    
+    copyToBuffer(2);
+    
+    strcpy(tweetBuffer, msgBuffer);
+    strcat(tweetBuffer, buffer);    
+
+    //strcpy(tweetBuffer, buffer);
+    //puts(tweetBuffer);
+    Serial.println(tweetBuffer);
+    sendTweet(tweetBuffer);
   }
           
   if (currentRead == READ_TYPE_LIGHT)
@@ -108,7 +139,6 @@ void loop()
     unit = "%";
   }
   
-  
   char tempDelta[10];
   dtostrf(abs(delta), 2 , 2, tempDelta);
  // Serial.println(tempDelta);
@@ -146,13 +176,20 @@ void loop()
     }
     
     sendTweet(message);
-    Serial.println(message);
 
   }
   totalRuns = totalRuns + 1;
   
-  delay(1800000);
-  //delay(1000);
+  if (!debug)
+  {
+    delay(1800000);
+  }
+  else
+  {
+    delay(5000);
+  }
+  memset(tweetBuffer, 0, 140);
+  memset(buffer, 0, 40);
 }
 
 double getDelta(double lastReading, double currentReading)
@@ -165,7 +202,7 @@ double getDelta(double lastReading, double currentReading)
 }
 
 boolean sendTweet(String message)
-{ 
+{
 
   int length = max(message.length(), 140);
   if (length == 0)
@@ -174,15 +211,19 @@ boolean sendTweet(String message)
   }
   length = length + 1;
   char tweet[length];
-  Serial.println(message);
-  Serial.print(message.length());
-  Serial.println(" characters");
   message.toCharArray(tweet, length);
-  strcat(tweet, (char*)" #arduino bit.ly/1APgD0F");
+  message.toCharArray(tweet, length);
+  copyToBuffer(0);
+  strcat(tweet, buffer);  
 
   Serial.println(tweet);
+  if (debug)
+  {
+    return true;
+  }
   Serial.println("connecting ...");
-  if (!debug && twitter.post(tweet)) 
+ 
+  if (twitter.post(tweet)) 
   {
     // Specify &Serial to output received response to Serial.
     // If no output is required, you can just omit the argument, e.g.
@@ -197,7 +238,7 @@ boolean sendTweet(String message)
      return false;
   }
  } 
- else if (!debug)
+ else 
  {
    Serial.println("connection failed.");
  }
@@ -266,4 +307,17 @@ String getLightLevelDescription(double lightLevel)
     return "bright";
   }
   return "very bright";
+}
+
+
+int freeRam ()
+{
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
+void copyToBuffer(int index)
+{
+  strcpy_P(buffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
 }
