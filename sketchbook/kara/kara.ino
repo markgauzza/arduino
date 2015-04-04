@@ -30,7 +30,7 @@
 
     #define error(msg) error_P(PSTR(msg))
     
-    uint32_t cards[] = {3496599971, 384132608, 3492105171, 372801280, 17936672, 17931312,383666656,383756576, 384227840,372429680 };
+    uint32_t cards[] = {3496599971, 3584577213, 3492105171, 372801280, 17936672, 17931312,383666656,383756576, 384227840,372429680 };
    
     uint32_t currentCard;
     
@@ -39,24 +39,24 @@
     int readAttempts = 0;
     int buttonPushes = 0;
     
-    prog_char string_0[] PROGMEM = "NAMES.WAV";   // "String 0" etc are strings to store - change to suit.
-    prog_char string_1[] PROGMEM = "NUMBERS.WAV";
-    prog_char string_2[] PROGMEM = "COLORS.WAV";
-    prog_char string_3[] PROGMEM = "4075_P.WAV";
-    prog_char string_4[] PROGMEM = "AJ_A.WAV";
-    prog_char string_5[] PROGMEM = "AJ_W.WAV";
-    prog_char string_6[] PROGMEM = "_N.WAV";
-    prog_char string_7[] PROGMEM = "_C.WAV";
-    prog_char string_8[] PROGMEM = "_D.WAV";
-    prog_char string_9[] PROGMEM = "_S.WAV";
-    prog_char string_10[] PROGMEM ="AJ_P.WAV";
-    prog_char string_11[] PROGMEM ="EM_CI.WAV";
-    prog_char string_12[] PROGMEM = "EM_GI.WAV";
+    const prog_char string_0[] PROGMEM = "NAMES.WAV";   // "String 0" etc are strings to store - change to suit.
+    const prog_char string_1[] PROGMEM = "NUMBERS.WAV";
+    const prog_char string_2[] PROGMEM = "COLORS.WAV";
+    const prog_char string_3[] PROGMEM = "4075_P.WAV";
+    const prog_char string_4[] PROGMEM = "AJ_A.WAV";
+    const prog_char string_5[] PROGMEM = "AJ_W.WAV";
+    const prog_char string_6[] PROGMEM = "_N.WAV";
+    const prog_char string_7[] PROGMEM = "_C.WAV";
+    const prog_char string_8[] PROGMEM = "_D.WAV";
+    const prog_char string_9[] PROGMEM = "_S.WAV";
+    const prog_char string_10[] PROGMEM ="AJ_P.WAV";
+    const prog_char string_11[] PROGMEM ="EM_CI.WAV";
+    const prog_char string_12[] PROGMEM = "EM_GI.WAV";
 
 
 // Then set up a table to refer to your strings.
 
-PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
+PGM_P const string_table[] PROGMEM = 	   // change "string_table" name to suit
 {   
   string_0,
   string_1,
@@ -252,7 +252,6 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         cardidentifier <<= 8; cardidentifier |= uid[0];      
         Serial.println(cardidentifier);
      
-        // Correct card
         if (isGameMode == 0)
         {
           playCardMode(cardidentifier);
@@ -263,6 +262,7 @@ char buffer[15];    // make sure this is large enough for the largest string it 
         }
         else if (cardidentifier == currentCard) 
         { 
+          // Game mode
           PgmPrintln("correct");
           playIndex(4);         
 
@@ -274,7 +274,19 @@ char buffer[15];    // make sure this is large enough for the largest string it 
           }
           else
           {
-            currentIndex++;
+            if (currentMode == MODE_NUMBERS)
+            {
+              currentIndex++;
+            }
+            else
+            {
+              int randomNumber = random(0, totalCards);
+              if (randomNumber == currentIndex)
+              {
+                randomNumber ++;
+              }
+              currentIndex = randomNumber;
+            }
           }
           
           if (currentMode == MODE_NAMES)
