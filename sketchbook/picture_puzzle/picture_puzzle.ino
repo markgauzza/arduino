@@ -1,4 +1,4 @@
-
+ 
 #include <WaveHC.h>
     #include <WaveUtil.h>
     
@@ -8,14 +8,24 @@
     FatReader file; // This object represent the WAV file for a pi digit or period
     WaveHC wave; // This is the only wave (audio) object, since we will only play one at a time
     
-
+    
+    const prog_char string_0[] PROGMEM = "FF.WAV";   // "String 0" etc are strings to store - change to suit.
+    const prog_char string_1[] PROGMEM = "EM_FF.WAV";
+    
+    PGM_P const string_table[] PROGMEM = 	   // change "string_table" name to suit
+    {   
+      string_0,
+      string_1,
+    };
+    
+    char buffer[15]; 
     
     const int TOTAL_SENSORS = 5;
     uint32_t LIGHT_THRESHOLD = 200;
     
-    int litPieces[TOTAL_SENSORS] = {};
+    int litPieces[TOTAL_SENSORS] = {0, 0, 0, 0, 0};
 
-    String sounds[TOTAL_SENSORS] = {"GRANDPA.WAV" "GEEGEE.WAV", "GRANNY.WAV", "MARK.WAV", "BRIAN.WAV"};
+    char* sounds[TOTAL_SENSORS] = {"GRANDPA.WAV", "GEEGEE.WAV", "GRANNY.WAV", "MARK.WAV", "BRIAN2.WAV"};
 
     
     #define error(msg) error_P(PSTR(msg))
@@ -46,37 +56,60 @@
     
   void loop()
   {
+    boolean pieceOn = false;
     for (int i = 0; i < TOTAL_SENSORS; i++)
     {
 
       int pin = i + 1;
       Serial.print("pin: ");
       Serial.println(pin);
-      if (!isDark(pin))
+      pieceOn = isDark(pin);
+      if (!pieceOn)
       {
-        Serial.println("light");
         litPieces[i] = pin;
+        Serial.print("Piece ");
+        Serial.print(i);
+        Serial.println(" is off");        
       }
       else
       {
-        Serial.println("Dark");
+        Serial.print("Piece ");
+        Serial.print(i);
+        Serial.println(" is on");        
+
+
       }
       
-      if (wasLit(pin))
+      if (wasLit(pin) && pieceOn)
       {
-        Serial.println("was lit");
-      }
 
-      delay(500);
+        playcomplete(sounds[i]);
+        litPieces[i] = 0;
+        copyStringOutOfMemory(0);
+        playcomplete(buffer);
+        clearBuffer();
+        copyStringOutOfMemory(1);
+        playcomplete(buffer);
+        clearBuffer();
+        
+      }
+      
+      
     }
-    delay(1000);
+    delay(100);
+
+  }
+  
+  void clearBuffer()
+  {
+    strcpy_P(buffer, "");
   }
   
     boolean wasLit(int pin)
     {
-      for (int i = 0; i < sizeof(litPieces); i++)
-      {
-        if (litPieces[i] == pin )
+      for (int j = 0; j < TOTAL_SENSORS; j++)
+      {        
+        if (litPieces[j] == pin )
         {
           return true;
         }
@@ -87,7 +120,7 @@
     boolean isDark(int pin)
     {
       int lightLevel = analogRead(pin);      
-      Serial.println(lightLevel);
+     
       return lightLevel < LIGHT_THRESHOLD;
     }
     
@@ -141,5 +174,21 @@
     }
     // ok time to play!
     wave.play();
+    }
+    
+        
+    void copyToBuffer(int index)
+    {
+      strcpy_P(buffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
+    }
+    
+    void copyStringOutOfMemory(int index)
+    {     
+
+      char extBuffer[8];
+      
+      strcpy_P(extBuffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
+      strcat(buffer, extBuffer);
+      
     }
 
