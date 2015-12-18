@@ -21,7 +21,7 @@
     char buffer[15]; 
     
     const int TOTAL_SENSORS = 5;
-    uint32_t LIGHT_THRESHOLD = 200;
+    uint32_t LIGHT_THRESHOLD = 100;
     
     int litPieces[TOTAL_SENSORS] = {0, 0, 0, 0, 0};
 
@@ -51,30 +51,30 @@
       PgmPrintln("Files found:");     
       root.ls(); 
       
-
+      playcomplete("FF.WAV");
     }
     
   void loop()
   {
     boolean pieceOn = false;
-    for (int i = 0; i < TOTAL_SENSORS; i++)
+    for (int p = 0; p < TOTAL_SENSORS; p++)
     {
 
-      int pin = i + 1;
+      int pin = p + 1;
       Serial.print("pin: ");
       Serial.println(pin);
       pieceOn = isDark(pin);
       if (!pieceOn)
       {
-        litPieces[i] = pin;
+        litPieces[p] = pin;
         Serial.print("Piece ");
-        Serial.print(i);
+        Serial.print(p);
         Serial.println(" is off");        
       }
       else
       {
         Serial.print("Piece ");
-        Serial.print(i);
+        Serial.print(p);
         Serial.println(" is on");        
 
 
@@ -83,14 +83,16 @@
       if (wasLit(pin) && pieceOn)
       {
 
-        playcomplete(sounds[i]);
-        litPieces[i] = 0;
+        playcomplete(sounds[p]);
+        litPieces[p] = 0;
         copyStringOutOfMemory(0);
         playcomplete(buffer);
         clearBuffer();
-        copyStringOutOfMemory(1);
-        playcomplete(buffer);
-        clearBuffer();
+        delay(10);
+       // copyStringOutOfMemory(1);
+        playcomplete("EM_FF.WAV");
+//        clearBuffer();
+        delay(100);
         
       }
       
@@ -102,7 +104,7 @@
   
   void clearBuffer()
   {
-    strcpy_P(buffer, "");
+    strcpy(buffer, "");
   }
   
     boolean wasLit(int pin)
