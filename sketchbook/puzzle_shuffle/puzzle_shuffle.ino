@@ -12,6 +12,11 @@
     #define TOTAL_SENSORS 5
     #define MODE_GAME 1
     #define MODE_PUZZLE 0
+    #define DEBUG 1
+    #define FANFARE_INDEX 0
+    #define PROMPT_COUNT 75
+    #define DIDIT_INDEX  1
+    #define BUZZER_INDEX 3
     
     int currentMode = MODE_GAME;
     
@@ -21,17 +26,26 @@
     
     const prog_char string_0[] PROGMEM = "FF.WAV";   // "String 0" etc are strings to store - change to suit.
     const prog_char string_1[] PROGMEM = "EM_FF.WAV";
+    const prog_char string_2[] PROGMEM = "REMOVE.WAV";
+    const prog_char string_3[] PROGMEM = "BUZZ.WAV";
+    const prog_char string_4[] PROGMEM = "BACK.WAV";
+    
+   
     
     PGM_P const string_table[] PROGMEM = 	   // change "string_table" name to suit
     {   
       string_0,
       string_1,
+      string_2,
+      string_3,
+      string_4
     };
     
     char buffer[15]; 
     
+    int removePromptCount = 0;
 
-    uint32_t LIGHT_THRESHOLD = 75;
+    uint32_t LIGHT_THRESHOLD = 70;
     
     int litPieces[TOTAL_SENSORS] = {0,0, 0, 0, 0};
     
@@ -59,11 +73,26 @@
       {
         error("Couldn't open dir");
       }
-     
-      PgmPrintln("Files found:");     
-      root.ls(); 
       
-      playcomplete("FF.WAV");
+      if (debug())
+      {
+        PgmPrintln("Files found:");     
+        root.ls(); 
+        PgmPrintln("Initial light readings");
+        for (int l = 0; l < TOTAL_SENSORS; l++)
+        {
+          Serial.print(l);
+          PgmPrint(": ");
+          Serial.println(analogRead(l + 1));
+        }
+      }
+      
+      playIndex(FANFARE_INDEX);
+    }
+    
+    boolean debug()
+    {
+      return DEBUG == 1;
     }
     
   void loop()
@@ -76,30 +105,62 @@
     {
       if (!shuffled && !allPiecesOff())
       {
-        PgmPrintln("Take all the pieces off");
-      }
+        if (removePromptCount % PROMPT_COUNT == 0)
+        {
+          playIndex(2);
+        }
+        removePromptCount ++;
+      } 
       else
       {          
           if (!shuffled)
           {
             PgmPrintln("Ready for sequence");
             shuffleSequence();
+            playIndex(4);
+            delay(500);
             for (int s = 0; s< TOTAL_SENSORS; s++)
             {
               int seq = randomSequence[s];
-              Serial.print("playing sequence");
-              Serial.println(seq);
+              if (debug())
+              {
+                PgmPrint("playing sequence");  
+                Serial.println(seq);
+              }
             
               playcomplete(sounds[seq]);
-              delay(500);
+              delay(150);
             }
          }
          
          int firstCorrect = randomSequence[correct];
-         if (isDark(firstCorrect + 1))
+         if (correct == TOTAL_SENSORS)
          {
-          PgmPrintln("correct");          
+           playIndex(DIDIT_INDEX);
+           resetGame();
+        
+         }
+         else if (isDark(firstCorrect + 1))
+         {
+          playIndex(FANFARE_INDEX);         
           correct ++;
+         }
+         else if (!allPiecesOff())
+         {
+           if (correct == 0)
+           {
+             playIndex(BUZZER_INDEX);
+             resetGame();
+           }
+           else
+           {
+             if (totalPiecesOn() > correct)
+             {
+               playIndex(BUZZER_INDEX);
+               resetGame();
+               delay(100);
+             }
+           }
          }
       }
       
@@ -108,20 +169,34 @@
 
   }
   
+  void resetGame()
+  {
+    removePromptCount = 0;
+    shuffled = 0;
+    correct = 0;
+  }
+  
   boolean sequenceExists(int seed)
   {
     for (int s = 0; s < TOTAL_SENSORS; s++)
     {
       if (randomSequence[s] == seed)
       {
-        Serial.print(seed);
-        Serial.println("exists");
+        if (debug())
+        {
+          Serial.print(seed);
+          PgmPrint("exists");
+        }
         return true;
       }
     }
-            Serial.print(seed);
-        Serial.println("doesn't exist");
-        delay(1000);
+    
+    if (debug())
+    {    
+      Serial.print(seed);
+      PgmPrintln("doesn't exist");
+    }
+    delay(100);
     return false;
   }
   
@@ -138,19 +213,25 @@
     
     shuffled = true;
   }
+ 
+  int totalPiecesOn()
+  {
+    int result = 0;
+    for (int z = 0; z< TOTAL_SENSORS; z++)
+    {
+      int pin = z + 1;
+      if (isDark(pin))
+      {
+        result ++;
+      }
+    }
+    return result;
+  }
    
   
   boolean allPiecesOff()
   {
-    for (int z = 0; z < TOTAL_SENSORS; z++)
-    {
-      int pin = z + 1;
-      if (isDark(pin))
-      {       
-        return false;
-      }
-    }
-    return true;
+    return totalPiecesOn() == 0;
   }
   
   void doPuzzle()
@@ -182,15 +263,8 @@
       if (wasLit(pin) && pieceOn)
       {
 
-        playcomplete(sounds[p]);
-        litPieces[p] = 0;
-        copyStringOutOfMemory(0);
-        playcomplete(buffer);
-        clearBuffer();
-        delay(10);
-       // copyStringOutOfMemory(1);
-        playcomplete("EM_FF.WAV");
-//        clearBuffer();
+        playIndex(FANFARE_INDEX);
+        playIndex(DIDIT_INDEX);
         delay(100);
         
       }
@@ -280,14 +354,12 @@
     {
       strcpy_P(buffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
     }
-    
-    void copyStringOutOfMemory(int index)
-    {     
-
-      char extBuffer[8];
-      
-      strcpy_P(extBuffer, (char*)pgm_read_word(&(string_table[index]))); // Necessary casts and dereferencing, just copy. 
-      strcat(buffer, extBuffer);
-      
+        
+    void playIndex(int index)
+    {
+      copyToBuffer(index);
+      delay(10);
+      playcomplete(buffer);
+      delay(50);
     }
 
