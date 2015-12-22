@@ -49,10 +49,10 @@
     char buffer[15]; 
     
     int removePromptCount = 0;
-
-    uint32_t LIGHT_THRESHOLD = 70;
     
     int litPieces[TOTAL_SENSORS] = {0,0, 0, 0, 0};
+    
+    int thresholds[TOTAL_SENSORS] = {85, 85, 105, 50, 50};
     
     int randomSequence[TOTAL_SENSORS] = {3, 1, 2, 0, 4};
 
@@ -84,12 +84,8 @@
         PgmPrintln("Files found:");     
         root.ls(); 
         PgmPrintln("Initial light readings");
-        for (int l = 0; l < TOTAL_SENSORS; l++)
-        {
-          Serial.print(l);
-          PgmPrint(": ");
-          Serial.println(analogRead(l + 1));
-        }
+        printLightReadings();
+
       }
       
       pinMode(MODE_PIN, INPUT_PULLUP);
@@ -273,8 +269,6 @@
     {
 
       int pin = p + 1;
-      Serial.print("pin: ");
-      Serial.println(pin);
       pieceOn = isDark(pin);
       if (!pieceOn)
       {
@@ -313,7 +307,11 @@
       
       
     }
-    delay(100);
+    delay(10);
+    if (debug())
+    {
+      delay(1000);
+    }
 
     
   
@@ -339,8 +337,15 @@
     boolean isDark(int pin)
     {
       int lightLevel = analogRead(pin);      
+      if (debug())
+      {
+        printLightReadings();
+      }
+      
+      int threshold = thresholds[pin - 1];
      
-      return lightLevel < LIGHT_THRESHOLD;
+     
+      return lightLevel < threshold;
     }
     
        
@@ -395,6 +400,15 @@
     wave.play();
     }
     
+void printLightReadings()
+{
+          for (int l = 0; l < TOTAL_SENSORS; l++)
+        {
+          Serial.print(l);
+          PgmPrint(": ");
+          Serial.println(analogRead(l + 1));
+        }
+}
         
     void copyToBuffer(int index)
     {
