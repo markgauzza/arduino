@@ -30,16 +30,16 @@ char tweetBuffer[120];
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 // If you don't specify the IP address, DHCP is used(only in Arduino 1.0 or later).
-byte ip[] = { 192, 168, 1, 177 };
+byte ip[] = { 192, 168, 0, 177 };
 
 // Your Token to Tweet (get it from http://arduino-tweet.appspot.com/)
 Twitter twitter("2355186536-xXWPEzUPbXpNQQd9SgxosgK7SDpsQeE4zSlWc4h");
 
-prog_char string_0[] PROGMEM = " #arduino bit.ly/1APgD0F";  
-prog_char string_1[] PROGMEM = "Cycled through ";  
-prog_char string_2[] PROGMEM = " light, temperature and humidity reads.";  
+const prog_char string_0[] PROGMEM = " #arduino bit.ly/1APgD0F";  
+const prog_char string_1[] PROGMEM = "Cycled through ";  
+const prog_char string_2[] PROGMEM = " light, temperature and humidity reads.";  
 
-PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
+ PGM_P const string_table[] PROGMEM= 	   // change "string_table" name to suit
 {   
   string_0,
   string_1,
