@@ -12,13 +12,14 @@
     #define TOTAL_SENSORS 5
     #define MODE_GAME 1
     #define MODE_PUZZLE 0
-    #define DEBUG 1
+    #define DEBUG 0
     #define FANFARE_INDEX 0
     #define PROMPT_COUNT 75
     #define DIDIT_INDEX  1
     #define BUZZER_INDEX 3
+    #define MODE_PIN 8
     
-    int currentMode = MODE_GAME;
+    int currentMode = MODE_PUZZLE;
     
     boolean shuffled = false;
     
@@ -29,6 +30,8 @@
     const prog_char string_2[] PROGMEM = "REMOVE.WAV";
     const prog_char string_3[] PROGMEM = "BUZZ.WAV";
     const prog_char string_4[] PROGMEM = "BACK.WAV";
+    const prog_char string_5[] PROGMEM = "PUZZLE.WAV";
+    const prog_char string_6[] PROGMEM = "EM_GI.WAV";
     
    
     
@@ -38,7 +41,9 @@
       string_1,
       string_2,
       string_3,
-      string_4
+      string_4,
+      string_5,
+      string_6
     };
     
     char buffer[15]; 
@@ -87,7 +92,10 @@
         }
       }
       
+      pinMode(MODE_PIN, INPUT_PULLUP);
+      
       playIndex(FANFARE_INDEX);
+       playIndex(5);
     }
     
     boolean debug()
@@ -97,6 +105,30 @@
     
   void loop()
   {
+
+    if(!digitalRead(MODE_PIN))
+    {
+      if (currentMode == MODE_PUZZLE)
+      {
+        currentMode = MODE_GAME;
+        if (debug())
+        {
+          Serial.println("switch mode to game");
+        }
+        playIndex(6);
+        
+      }
+      else
+      {
+        currentMode = MODE_PUZZLE;
+        if (debug())
+        {
+           Serial.println("switch mode to game");
+        }
+        playIndex(5);
+      }
+    }
+    
     if (currentMode == MODE_PUZZLE)
     {
       doPuzzle();
@@ -241,36 +273,50 @@
     {
 
       int pin = p + 1;
-      //rial.print("pin: ");
-//      Serial.println(pin);
+      Serial.print("pin: ");
+      Serial.println(pin);
       pieceOn = isDark(pin);
       if (!pieceOn)
       {
         litPieces[p] = pin;
-  //      Serial.print("Piece ");
-//       Serial.print(p);
- //       Serial.println(" is off");        
+        if (debug())
+        {
+          Serial.print("Piece ");
+          Serial.print(p);
+          Serial.println(" is off");        
+        }
       }
-  /*    else
+      else if (debug())
       {
         Serial.print("Piece ");
         Serial.print(p);
         Serial.println(" is on");        
 
 
-      }*/
+      }
       
       if (wasLit(pin) && pieceOn)
       {
 
+        playcomplete(sounds[p]);
+        litPieces[p] = 0;
+        
+        
         playIndex(FANFARE_INDEX);
+        delay(10);
+
         playIndex(DIDIT_INDEX);
+
         delay(100);
         
       }
       
       
     }
+    delay(100);
+
+    
+  
   }
   
   void clearBuffer()
