@@ -33,7 +33,7 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 byte ip[] = { 192, 168, 0, 177 };
 
 // Your Token to Tweet (get it from http://arduino-tweet.appspot.com/)
-Twitter twitter("2355186536-xXWPEzUPbXpNQQd9SgxosgK7SDpsQeE4zSlWc4h");
+Twitter twitter("xxxxxxx-xxxxxxxxx");
 
 const prog_char string_0[] PROGMEM = " #arduino bit.ly/1APgD0F";  
 const prog_char string_1[] PROGMEM = "Cycled through ";  
